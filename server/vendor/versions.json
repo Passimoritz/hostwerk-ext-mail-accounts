@@ -1,0 +1,6 @@
+{
+  "imapflow": "2.9.1",
+  "nodemailer": "10.2.1",
+  "mailparser": "3.12.4",
+  "sanitize-html": "2.18.1"
+}

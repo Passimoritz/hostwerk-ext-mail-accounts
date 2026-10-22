@@ -1,0 +1,16 @@
+{
+  "name": "hostwerk-ext-mail-accounts",
+  "private": true,
+  "description": "Build tooling only – the package itself ships server/vendor/mail-libs.js (bundled) and ui/index.js (built).",
+  "scripts": {
+    "vendor": "node scripts/vendor.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "imapflow": "2.9.1",
+    "mailparser": "3.12.4",
+    "nodemailer": "10.2.1",
+    "sanitize-html": "2.18.1"
+  }
+}
