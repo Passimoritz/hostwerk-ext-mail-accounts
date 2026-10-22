@@ -27,9 +27,6 @@
 .ma-side-foot { margin-top: auto; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding-top: var(--sp-2); border-top: 1px solid var(--line); }
 .ma-side-foot .btn { justify-content: flex-start; }
 .ma-bad { color: var(--err); }
-.ma-spin { animation: ma-spin 1s linear infinite; color: var(--muted); }
-@keyframes ma-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .ma-spin { animation: none; } }
 
 /* Liste */
 .ma-list { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--line); }
@@ -55,7 +52,7 @@
 .ma-row.compact .ma-check { width: 24px; height: 24px; }
 .ma-avatar { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; font-size: var(--fs-xs); font-weight: 700; color: var(--text); background: color-mix(in srgb, hsl(var(--h, 210) 70% 50%) 28%, var(--surface)); }
 .ma-avatar.sm { width: 30px; height: 30px; font-size: var(--fs-2xs); }
-.ma-row.compact .ma-avatar.sm { width: 22px; height: 22px; font-size: 9px; }
+.ma-row.compact .ma-avatar.sm { width: 22px; height: 22px; font-size: var(--fs-2xs); }
 .ma-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .ma-row-top { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; }
 .ma-from { font-size: var(--fs-sm); color: var(--text-2); }
