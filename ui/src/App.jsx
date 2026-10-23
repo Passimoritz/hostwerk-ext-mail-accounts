@@ -4,7 +4,8 @@ import {
   CircleAlert, CloudOff, Loader2, Send, Ban, MoreHorizontal, FolderPlus, Pencil, FileDown, CheckSquare, Square, Users, AtSign,
 } from 'lucide-react';
 import { get, post, on, useApi } from '@hostwerk/api';
-import { Btn, Empty, Loading, Callout, InfoTip, toast, confirmDialog, promptDialog, useFillHeight } from '@hostwerk/ui';
+import { Btn, Empty, Loading, Callout, InfoTip, toast, confirmDialog, promptDialog } from '@hostwerk/ui';
+import { useFill } from './fill';
 import { contextMenu } from '@hostwerk/kit';
 import { t, pl } from '@hostwerk/i18n';
 import { BASE, qs, apiUrl, sortFolders, folderIcon, folderLabel, when, who, initials, hue, typing, listen, emit } from './lib';
@@ -122,7 +123,8 @@ function Row({ it, count, selected, active, checked, onOpen, onCheck, onMenu, co
 }
 
 export function MailApp({ embedded = false }) {
-  const fill = useFillHeight({ min: 420 });
+  // Füllhöhe aus Hostwerk, bei älteren Versionen ohne useFillHeight die gleichwertige Kopie aus fill.js
+  const fill = useFill({ min: 420 });
   const ov = useApi(BASE, [], { live: false });
   const overview = ov.data;
   const [folders, setFolders] = useState({});

@@ -1,3 +1,7 @@
+## 1.0.2
+
+- The mailbox fills the window also with Hostwerk versions without the fill-height building block (own fallback), and corrects for lines Hostwerk shows under a tab / Das Postfach füllt das Fenster auch mit Hostwerk-Versionen ohne den Baustein für die Füllhöhe (eigener Rückfall) und rechnet Zeilen ab, die Hostwerk unter einem Reiter zeigt
+
 ## 1.0.1
 
 - The connecting indicator uses Hostwerk’s spinning icon instead of an own animation; small avatars use the font scale. / Die Verbinden-Anzeige nutzt Hostwerks drehendes Symbol statt einer eigenen Animation; kleine Avatare nutzen die Schrift-Skala.
