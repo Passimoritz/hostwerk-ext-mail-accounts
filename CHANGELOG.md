@@ -1,3 +1,7 @@
+## 1.0.3
+
+- New animated icon and banner in the common Hostwerk style (isometric block). / Neues animiertes Symbol und Banner im gemeinsamen Hostwerk-Stil (isometrischer Block).
+
 ## 1.0.2
 
 - The mailbox fills the window also with Hostwerk versions without the fill-height building block (own fallback), and corrects for lines Hostwerk shows under a tab / Das Postfach füllt das Fenster auch mit Hostwerk-Versionen ohne den Baustein für die Füllhöhe (eigener Rückfall) und rechnet Zeilen ab, die Hostwerk unter einem Reiter zeigt
