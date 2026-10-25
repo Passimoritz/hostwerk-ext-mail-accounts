@@ -4,7 +4,9 @@
 
 Your mailboxes from Gmail, Outlook, web.de, GMX, T-Online, iCloud, Yahoo, Posteo, mailbox.org or your own domain right inside Hostwerk: all inboxes together, folders, conversations, search, safe reading that blocks trackers and flags phishing, writing with signatures, templates and undo send, rules, push via IMAP IDLE and offline reading. Hostwerk finds the settings itself – without its own provider list.
 
-[Deutsch](README.de.md) · An official [Hostwerk](https://github.com/Passimoritz/hostwerk-public) extension (SDK 3.3, native extension, Hostwerk 3.0+)
+[Deutsch](README.de.md) · An official [Hostwerk](https://github.com/Passimoritz/hostwerk-public) extension (native extension, Hostwerk 3.0 or newer)
+
+![Screenshot](docs/screenshot.png)
 
 ## What it does
 
@@ -64,6 +66,12 @@ Why no built-in OAuth app? Google and Microsoft only give OAuth to registered ap
 - Permission `connect:mail` (SDK 3.3): IMAP/SMTP/POP3 to the servers you enter, plus looking up their settings. Sandboxed (not from the official catalog) only the mail ports and never into the home network – enforced by Hostwerk.
 - Traces only in its own data folder (`data/mail-accounts`) – nothing outside.
 
+## Install
+
+In Hostwerk: **Extensions → Discover** and click “Install”.
+
+Native extensions run as part of Hostwerk (own server and interface part). That is why Hostwerk only installs them from the official catalogue (with checksum) or in developer mode.
+
 ## Permissions
 
 | Permission | Why |
@@ -72,7 +80,7 @@ Why no built-in OAuth app? Google and Microsoft only give OAuth to registered ap
 | `connect:mail` | mail servers are free to choose – no fixed address list possible |
 | `use:ai` | optional AI help for one mail (only after your consent) |
 
-## Development
+## Develop
 
 ```
 npm i --no-save                      # imapflow, nodemailer, mailparser, sanitize-html, esbuild (fixed versions)
@@ -92,3 +100,7 @@ Bundled libraries (MIT, MIT-0 and others – see `server/vendor/LICENSES.txt`): 
 - No POP3 accounts (IMAP only), no S/MIME/PGP, no calendar/contacts sync (CardDAV/CalDAV), no moving between accounts.
 - Search in “All inboxes” covers the inboxes plus the local cache; inside a folder the server searches the whole folder.
 - Exchange without IMAP (EWS/Graph only) is not supported.
+
+## License
+
+MIT

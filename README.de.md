@@ -4,7 +4,9 @@
 
 Deine Postfächer von Gmail, Outlook, web.de, GMX, T-Online, iCloud, Yahoo, Posteo, mailbox.org oder der eigenen Domain direkt in Hostwerk: alle Posteingänge zusammen, Ordner, Konversationen, Suche, sicheres Lesen mit Schutz vor Trackern und Phishing, Schreiben mit Signaturen, Vorlagen und Rückgängig-Senden, Regeln, Push über IMAP IDLE und Offline-Lesen. Die Einstellungen findet Hostwerk selbst – ohne eigene Anbieterliste.
 
-[English](README.md) · Eine offizielle [Hostwerk](https://github.com/Passimoritz/hostwerk-public)-Erweiterung (SDK 3.3, native Erweiterung, Hostwerk 3.0+)
+[English](README.md) · Offizielle [Hostwerk](https://github.com/Passimoritz/hostwerk-public)-Erweiterung (native Erweiterung, ab Hostwerk 3.0)
+
+![Bildschirmfoto](docs/screenshot.de.png)
 
 ## Was sie kann
 
@@ -64,6 +66,12 @@ Warum keine eingebaute OAuth-App? Google und Microsoft geben OAuth nur an regist
 - Recht `connect:mail` (SDK 3.3): IMAP/SMTP/POP3 zu den Servern, die du einträgst, plus deren Einstellungen suchen. Abgeschottet (nicht aus dem offiziellen Katalog) nur die Mail-Ports und nie ins Heimnetz – das erzwingt Hostwerk.
 - Spuren nur im eigenen Datenordner (`data/mail-accounts`) – nichts außerhalb.
 
+## Installieren
+
+In Hostwerk: **Erweiterungen → Entdecken** und „Installieren“ klicken.
+
+Native Erweiterungen laufen als Teil von Hostwerk (eigener Server- und Oberflächen-Teil). Deshalb installiert Hostwerk sie nur aus dem offiziellen Katalog (mit Prüfsumme) oder im Entwickler-Modus.
+
 ## Rechte
 
 | Recht | Wofür |
@@ -92,3 +100,7 @@ Mitgelieferte Bibliotheken (MIT, MIT-0 und weitere – siehe `server/vendor/LICE
 - Keine POP3-Konten (nur IMAP), kein S/MIME/PGP, kein Kalender-/Kontakte-Abgleich (CardDAV/CalDAV), kein Verschieben zwischen Konten.
 - Die Suche in „Alle Posteingänge“ umfasst die Posteingänge plus den lokalen Zwischenspeicher; in einem Ordner durchsucht der Server den ganzen Ordner.
 - Exchange ohne IMAP (nur EWS/Graph) geht nicht.
+
+## Lizenz
+
+MIT
