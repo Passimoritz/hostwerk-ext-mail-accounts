@@ -1,3 +1,7 @@
+## 1.1.0
+
+- The “connecting” icon uses Hostwerk’s spin animation and stands still with “Reduce animations” (SDK 3.6). / Das Symbol „verbindet“ nutzt Hostwerks Dreh-Animation und steht bei „Animationen reduzieren“ still (SDK 3.6).
+
 ## 1.0.3
 
 - New animated icon and banner in the common Hostwerk style (isometric block). / Neues animiertes Symbol und Banner im gemeinsamen Hostwerk-Stil (isometrischer Block).

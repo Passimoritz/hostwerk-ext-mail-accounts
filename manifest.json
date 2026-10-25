@@ -9,7 +9,7 @@
     "de": "Deine Postfächer von Gmail, Outlook, web.de, GMX, T-Online, iCloud, Yahoo, Posteo, mailbox.org oder der eigenen Domain direkt in Hostwerk: alle Posteingänge zusammen, Ordner, Konversationen, Suche, sicheres Lesen mit Schutz vor Trackern und Phishing, Schreiben mit Signaturen, Vorlagen und Rückgängig-Senden, Regeln, Push über IMAP IDLE und Offline-Lesen. Die Einstellungen findet Hostwerk selbst – ohne eigene Anbieterliste.",
     "en": "Your mailboxes from Gmail, Outlook, web.de, GMX, T-Online, iCloud, Yahoo, Posteo, mailbox.org or your own domain right inside Hostwerk: all inboxes together, folders, conversations, search, safe reading that blocks trackers and flags phishing, writing with signatures, templates and undo send, rules, push via IMAP IDLE and offline reading. Hostwerk finds the settings itself – without its own provider list."
   },
-  "version": "1.0.3",
+  "version": "1.1.0",
   "author": "Hostwerk",
   "homepage": "https://github.com/Passimoritz/hostwerk-ext-mail-accounts",
   "license": "MIT",

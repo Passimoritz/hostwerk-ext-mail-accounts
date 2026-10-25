@@ -58,7 +58,7 @@ function Sidebar({ overview, view, setView, folders, loadFolders, onCompose, onA
                 <span className="ma-dot" aria-hidden="true" />
                 <span className="grow ellipsis" title={a.email}>{a.name}</span>
                 {bad && <CircleAlert size={14} className="ma-bad" aria-label={t(STATUS[a.status])} />}
-                {a.status === 'connecting' && <Loader2 size={13} className="spin muted" aria-label={t('Connecting …')} />}
+                {a.status === 'connecting' && <Loader2 size={13} className="spin hw-spin muted" aria-label={t('Connecting …')} />}
                 {a.unread > 0 && <span className="ma-count">{a.unread}</span>}
               </button>
               <button type="button" className="btn xs ghost icon ma-acc-more" title={t('More for {name}', { name: a.name })} aria-label={t('More for {name}', { name: a.name })} onClick={(e) => accMenu(e, a)}><MoreHorizontal size={14} /></button>
