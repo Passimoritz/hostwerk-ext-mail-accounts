@@ -437,6 +437,11 @@
   "This account has no trash folder.": "Dieses Konto hat keinen Papierkorb.",
   "Folder not found.": "Ordner nicht gefunden.",
   "This account is already connected.": "Dieses Konto ist schon verbunden.",
+  "Enter a folder name.": "Gib einen Ordnernamen ein.",
+  "A folder with this name already exists.": "Einen Ordner mit diesem Namen gibt es schon.",
+  "“{address}” isn’t a valid e-mail address.": "„{address}“ ist keine gültige E-Mail-Adresse.",
+  "The mails couldn’t be moved – does the folder still exist?": "Die Mails ließen sich nicht verschieben – gibt es den Ordner noch?",
+  "This folder doesn’t exist (any more).": "Diesen Ordner gibt es nicht (mehr).",
   "This attachment doesn’t exist.": "Diesen Anhang gibt es nicht.",
   "This backup doesn’t exist.": "Diese Sicherung gibt es nicht.",
   "This mail has no unsubscribe link.": "Diese Mail hat keinen Abmelde-Link.",
@@ -485,6 +490,12 @@
   "{n} unread mail": "{n} ungelesene Mail",
   "{n} unread mails": "{n} ungelesene Mails",
   "$patterns": [
-    ["OAuth: “{}” is missing.", "OAuth: „{}“ fehlt."]
-  ]
+    [
+      "OAuth: “{}” is missing.",
+      "OAuth: „{}“ fehlt."
+    ]
+  ],
+  "This folder doesn’t exist (anymore).": "Diesen Ordner gibt es nicht (mehr).",
+  "The mail server refused to delete the folder.": "Der Mailserver hat das Löschen des Ordners abgelehnt.",
+  "No connection to {names} – their mails show the last known state.": "Keine Verbindung zu {names} – deren Mails zeigen den letzten bekannten Stand."
 }

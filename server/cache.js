@@ -25,7 +25,8 @@ class Cache {
     // Einträge ohne Dateien (z. B. von Hand gelöscht) verwerfen
     for (const [k, v] of Object.entries(this.index)) if (!fs.existsSync(path.join(this.msgDir, `${v.h}.json`))) delete this.index[k];
   }
-  setLimit(mb) { this.limit = Math.max(20, Math.min(20000, Number(mb) || 300)) * 1024 * 1024; this.evict(); }
+  /** Grenze in MB; 0 = nichts zwischenspeichern (vorhandene Mails fliegen raus) */
+  setLimit(mb) { const n = Number(mb); this.limit = (n === 0 ? 0 : Math.max(20, Math.min(20000, n || 300))) * 1024 * 1024; this.evict(); }
   bytes() { return Object.values(this.index).reduce((n, e) => n + (e.bytes || 0), 0); }
   stats() { return { bytes: this.bytes(), count: Object.keys(this.index).length, limit: this.limit }; }
   save() {

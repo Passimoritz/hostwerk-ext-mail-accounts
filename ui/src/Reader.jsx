@@ -7,7 +7,7 @@ import { get, post, openExternal, canPickPath, pickFolder } from '@hostwerk/api'
 import { Btn, Modal, Callout, Loading, Empty, toast, confirmDialog } from '@hostwerk/ui';
 import { contextMenu } from '@hostwerk/kit';
 import { t, pl } from '@hostwerk/i18n';
-import { BASE, apiUrl, qs, fullDate, addrText, who, initials, hue, fmtSize, textDomain, hostOf, baseDomain, emit } from './lib';
+import { BASE, apiUrl, qs, moveTargets, Keep, fullDate, addrText, who, initials, hue, fmtSize, textDomain, hostOf, baseDomain, emit } from './lib';
 
 const LEVEL = { danger: 'err', warn: 'warn', info: 'info' };
 const AUTH_ICON = (v) => (v === 'pass' ? ShieldCheck : v && /fail/.test(v) ? ShieldX : ShieldAlert);
@@ -135,7 +135,7 @@ export function Reader({ item, overview, ai, onAction, onBack, folders, narrow }
     { label: t('Download'), icon: Download, onClick: () => { const l = document.createElement('a'); l.href = attUrl(a, { download: 1 }); l.download = a.filename; l.click(); } },
     canPickPath() && { label: t('Save to folder …'), icon: FolderDown, onClick: () => saveAll(a) },
   ]);
-  const moveMenu = (e) => contextMenu(e, (folders || []).filter((f) => f.path !== item.folder).map((f) => ({ label: f.name === f.path ? f.name : f.path, icon: FolderInput, onClick: () => onAction('move', [ref], { folder: f.path }) })));
+  const moveMenu = (e) => contextMenu(e, moveTargets(folders, item.folder).map((f) => ({ label: <Keep>{f.label}</Keep>, icon: f.icon, onClick: () => onAction('move', [ref], { folder: f.path }) })));
   const more = (e) => contextMenu(e, [
     { label: item.seen === false ? t('Mark as read') : t('Mark as unread'), icon: item.seen === false ? MailOpen : Mail, onClick: () => onAction('seen', [ref], { on: item.seen === false }) },
     { label: t('Move to …'), icon: FolderInput, onClick: () => moveMenu(e) },
@@ -150,7 +150,7 @@ export function Reader({ item, overview, ai, onAction, onBack, folders, narrow }
     <article className="ma-reader" aria-label={view.subject || t('(no subject)')}>
       <header className="ma-read-head">
         {narrow && <Btn className="xs ghost icon" icon={ArrowLeft} title="Back to the list" aria-label="Back to the list" onClick={onBack} />}
-        <h2 className="ma-subject">{view.subject || t('(no subject)')}</h2>
+        <h2 className="ma-subject"><Keep>{view.subject || t('(no subject)')}</Keep></h2>
         <div className="ma-read-actions" role="toolbar" aria-label={t('Actions')}>
           <Btn className="sm ghost icon" icon={Reply} title="Reply (R)" aria-label="Reply" onClick={() => onAction('reply', [ref])} />
           <Btn className="sm ghost icon" icon={ReplyAll} title="Reply all (A)" aria-label="Reply all" onClick={() => onAction('replyAll', [ref])} />
@@ -164,8 +164,8 @@ export function Reader({ item, overview, ai, onAction, onBack, folders, narrow }
       <div className="ma-read-meta">
         <span className="ma-avatar" style={{ '--h': hue(view.from && view.from.address) }} aria-hidden="true">{initials(view.from)}</span>
         <div className="grow ma-read-who">
-          <div><b>{who(view.from)}</b> <span className="muted small">{view.from && view.from.name ? `<${view.from.address}>` : ''}</span></div>
-          <div className="small muted ellipsis" title={(view.to || []).map(addrText).join(', ')}>{t('to')} {(view.to || []).map((a) => (acc && a.address === acc.email ? t('me') : who(a))).join(', ')}{view.cc && view.cc.length ? ` · ${t('cc')} ${view.cc.map(who).join(', ')}` : ''}</div>
+          <div><b><Keep>{who(view.from)}</Keep></b> <span className="muted small">{view.from && view.from.name ? `<${view.from.address}>` : ''}</span></div>
+          <div className="small muted ellipsis" title={(view.to || []).map(addrText).join(', ')}><Keep>{t('to')} {(view.to || []).map((a) => (acc && a.address === acc.email ? t('me') : who(a))).join(', ')}{view.cc && view.cc.length ? ` · ${t('cc')} ${view.cc.map(who).join(', ')}` : ''}</Keep></div>
         </div>
         <div className="ma-read-date small muted" title={fullDate(view.date)}>{fullDate(view.date)}</div>
       </div>
@@ -190,7 +190,7 @@ export function Reader({ item, overview, ai, onAction, onBack, folders, narrow }
       )}
       {headers && (
         <dl className="ma-cert ma-details">
-          <dt>From</dt><dd>{addrText(view.from)}</dd>
+          <dt>From</dt><dd><Keep>{addrText(view.from)}</Keep></dd>
           {view.replyTo && view.replyTo.length > 0 && <><dt>Reply to</dt><dd>{view.replyTo.map(addrText).join(', ')}</dd></>}
           <dt>To</dt><dd>{(view.to || []).map(addrText).join(', ')}</dd>
           {view.cc && view.cc.length > 0 && <><dt>Cc</dt><dd>{view.cc.map(addrText).join(', ')}</dd></>}
@@ -222,7 +222,7 @@ export function Reader({ item, overview, ai, onAction, onBack, folders, narrow }
             {view.attachments.map((a) => (
               <button key={a.i} type="button" className={`ma-att-card${/\.(exe|scr|bat|cmd|js|vbs|ps1|msi|jar|lnk|hta|iso|docm|xlsm)$/i.test(a.filename) ? ' ma-risky' : ''}`} title={t('{name} – right-click for more', { name: a.filename })}
                 onClick={() => { if (previewable(a)) setPreview(a); else { const l = document.createElement('a'); l.href = attUrl(a, { download: 1 }); l.download = a.filename; l.click(); } }} onContextMenu={(e) => attMenu(e, a)}>
-                <Paperclip size={14} aria-hidden="true" /><span className="ellipsis grow">{a.filename}</span><span className="small muted">{fmtSize(a.size)}</span>
+                <Paperclip size={14} aria-hidden="true" /><span className="ellipsis grow"><Keep>{a.filename}</Keep></span><span className="small muted">{fmtSize(a.size)}</span>
               </button>
             ))}
           </div>

@@ -88,6 +88,16 @@ test('Ordner mit Rollen, Liste, Lesen, Flags, Verschieben, Löschen, Suchen', as
     await s.svc.remove([{ account: s.acc.id, folder: 'Trash', uid: trashUid }]);
     assert.strictEqual(s.imap.boxes.get('Trash').msgs.length, 0, 'aus dem Papierkorb endgültig');
     assert.strictEqual(s.imap.boxes.get('INBOX').msgs.length, 1);
+    const left = s.imap.boxes.get('INBOX').msgs[0].uid;
+    await assert.rejects(s.svc.move([it(left)], { folder: 'Gibt es nicht' }), (e) => e.status === 409, 'abgelehntes MOVE ist kein Erfolg');
+    assert.strictEqual(s.imap.boxes.get('INBOX').msgs.length, 1);
+    await assert.rejects(s.svc.folderAction(s.acc.id, { action: 'create', path: '   ' }), (e) => e.status === 400);
+    await s.svc.folderAction(s.acc.id, { action: 'create', path: 'Doppelt' });
+    await assert.rejects(s.svc.folderAction(s.acc.id, { action: 'create', path: 'Doppelt' }), (e) => e.status === 409, 'Ordner gibt es schon');
+    await s.svc.folderAction(s.acc.id, { action: 'delete', path: 'Doppelt' });
+    assert.ok(!s.imap.boxes.has('Doppelt'), 'Ordner gelöscht');
+    await assert.rejects(s.svc.folderAction(s.acc.id, { action: 'delete', path: 'Doppelt' }), (e) => e.status === 404, 'Ordner gibt es nicht mehr – kein Erfolg');
+    assert.ok(await s.svc.client(s.acc.id).folderStatus('INBOX'), 'Zähler eines Ordners (nicht vom Verbindungszustand verdeckt)');
   } finally { await s.done(); }
 });
 

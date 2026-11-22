@@ -173,6 +173,11 @@ function routes(host, svc) {
   r.get('/mail-accounts/export', async (req, res) => {
     const { account, folder } = q(req);
     svc.account(account);
+    // Ordner vorher prüfen – sonst käme bei einem Fehler still eine leere .mbox-Datei an
+    // imapflow meldet einen fehlenden Ordner bei STATUS mit false statt einem Fehler
+    let st = null;
+    try { st = await svc.client(account).folderStatus(folder); } catch (e) { if (e.responseStatus !== 'NO' && e.responseStatus !== 'BAD') throw e; }
+    if (!st) throw host.error(404, 'This folder doesn’t exist (any more).');
     res.set('Content-Type', 'application/mbox').set('Content-Disposition', disp(`${folder.replace(/[/\\.]+/g, '-')}.mbox`, false)).set('Cache-Control', 'private, no-store');
     const write = (buf) => new Promise((resolve) => { if (res.write(buf)) resolve(); else res.once('drain', resolve); });
     try { await svc.exportMbox(account, folder, write); } catch (e) { host.log('export failed:', e.message); }

@@ -53,4 +53,15 @@ function evaluate(rules, item) {
   return out;
 }
 
-module.exports = { evaluate, clean, test, FIELDS, OPS, ACTIONS };
+/**
+ * Aktionen aller passenden Regeln in Ausführungs-Reihenfolge: erst markieren/gelesen/stumm, dann EIN Verschieben
+ * (Verschieben/Archiv/Papierkorb) – danach liegt die Mail nicht mehr im Posteingang, ein späteres „Stern“ ginge ins Leere.
+ */
+function ordered(matches) {
+  const all = [].concat(matches || []).flatMap((m) => m.actions || []);
+  const moving = (a) => a.type === 'move' || a.type === 'archive' || a.type === 'trash';
+  const firstMove = all.find(moving);
+  return [...all.filter((a) => !moving(a)), ...(firstMove ? [firstMove] : [])];
+}
+
+module.exports = { evaluate, ordered, clean, test, FIELDS, OPS, ACTIONS };

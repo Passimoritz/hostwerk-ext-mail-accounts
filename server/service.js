@@ -17,7 +17,7 @@ const { Notifier } = require('./notify');
 const { OAuth } = require('./oauth');
 const { Outbox, build, smtpSend } = require('./send');
 const { parseMessage, attachment, threads, baseSubject } = require('./message');
-const { evaluate, clean: cleanRule } = require('./rules');
+const { evaluate, ordered, clean: cleanRule } = require('./rules');
 const { discover, oidcEndpoints } = require('./discover');
 const { classify, peekCertificate, isLocal } = require('./netutil');
 const { textToHtml } = require('./sanitize');
@@ -194,17 +194,15 @@ class MailService extends EventEmitter {
     for (const it of items) {
       this.contacts.add(it.from ? [it.from] : [], { at: it.date });
       let muted = cfg.notify === false || it.seen;
-      for (const { actions } of evaluate(this.rulesCfg, it)) {
-        for (const a of actions) {
-          try {
-            if (a.type === 'mute') muted = true;
-            else if (a.type === 'read') { await c.flags('INBOX', [it.uid], { add: ['\\Seen'] }); muted = true; }
-            else if (a.type === 'flag') await c.flags('INBOX', [it.uid], { add: ['\\Flagged'] });
-            else if (a.type === 'move') { await c.move('INBOX', [it.uid], a.folder); muted = true; }
-            else if (a.type === 'archive') { await this.moveRole(id, 'INBOX', [it.uid], 'archive'); muted = true; }
-            else if (a.type === 'trash') { await this.moveRole(id, 'INBOX', [it.uid], 'trash'); muted = true; }
-          } catch { /* eine Regel scheitert – die Mail bleibt im Posteingang */ }
-        }
+      for (const a of ordered(evaluate(this.rulesCfg, it))) {
+        try {
+          if (a.type === 'mute') muted = true;
+          else if (a.type === 'read') { await c.flags('INBOX', [it.uid], { add: ['\\Seen'] }); muted = true; }
+          else if (a.type === 'flag') await c.flags('INBOX', [it.uid], { add: ['\\Flagged'] });
+          else if (a.type === 'move') { await c.move('INBOX', [it.uid], a.folder); muted = true; }
+          else if (a.type === 'archive') { await this.moveRole(id, 'INBOX', [it.uid], 'archive'); muted = true; }
+          else if (a.type === 'trash') { await this.moveRole(id, 'INBOX', [it.uid], 'trash'); muted = true; }
+        } catch { /* eine Regel scheitert – die Mail bleibt im Posteingang */ }
       }
       if (!muted) notifyList.push(it);
     }
@@ -262,7 +260,7 @@ class MailService extends EventEmitter {
     const auth = { type, user: String(a.user || prev.user || email).trim() };
     if (type === 'password') auth.pass = a.pass ? this.secrets.seal(String(a.pass)) : prev.type === 'password' ? prev.pass : '';
     return {
-      email, name: String(d.name || (existing && existing.name) || email).slice(0, 80), displayName: String(d.displayName ?? (existing && existing.displayName) ?? '').slice(0, 120),
+      email, name: String(d.name || (existing && existing.name) || '').trim().slice(0, 80) || email, displayName: String(d.displayName ?? (existing && existing.displayName) ?? '').slice(0, 120),
       imap: server(d.imap, 'imap', existing && existing.imap), smtp: server(d.smtp, 'smtp', existing && existing.smtp), auth,
       prevOauth: type === 'oauth2' && prev.type === 'oauth2' ? prev.oauth : null,
     };
@@ -317,6 +315,7 @@ class MailService extends EventEmitter {
     const a = this.account(id);
     if (d.imap || d.smtp || d.auth || d.email) {
       const n = this.normalize({ ...d, email: d.email || a.email, auth: d.auth || { type: a.auth.type } }, a);
+      if (this.accountsCfg.some((x) => x.id !== a.id && x.email === n.email && x.imap && n.imap && x.imap.host === n.imap.host)) throw err(409, 'This account is already connected.');
       a.email = n.email; a.imap = n.imap; a.smtp = n.smtp;
       if (n.auth.type === 'password') a.auth = n.auth;
       else if (d.oauthState) {
@@ -326,7 +325,11 @@ class MailService extends EventEmitter {
         this.tokens.set(id, { accessToken: r.tokens.accessToken, expires: r.tokens.expires });
       }
     }
-    for (const k of ['name', 'displayName', 'color', 'signature', 'saveSent']) if (d[k] !== undefined) a[k] = String(d[k]).slice(0, k === 'signature' ? 20000 : 120);
+    if (d.name !== undefined) a.name = String(d.name).trim().slice(0, 80) || a.email;
+    if (d.displayName !== undefined) a.displayName = String(d.displayName).trim().slice(0, 120);
+    if (d.signature !== undefined) a.signature = String(d.signature).slice(0, 20000);
+    if (d.color !== undefined && /^#[0-9a-f]{6}$/i.test(String(d.color))) a.color = String(d.color);
+    if (d.saveSent !== undefined) a.saveSent = ['auto', 'always', 'never'].includes(d.saveSent) ? d.saveSent : 'auto';
     if (d.notify !== undefined) a.notify = !!d.notify;
     if (d.aliases) a.aliases = [].concat(d.aliases).filter((x) => x && /^[^@\s]+@[^@\s]+$/.test(x.address || '')).map((x) => ({ name: String(x.name || '').slice(0, 120), address: String(x.address).toLowerCase() })).slice(0, 20);
     const was = a.enabled !== false;
@@ -429,12 +432,20 @@ class MailService extends EventEmitter {
   }
   async folderAction(id, { action, path: p, to }) {
     const c = this.client(id);
-    if (action === 'create') await c.createFolder(String(p));
-    else if (action === 'rename') await c.renameFolder(String(p), String(to));
+    const name = (s) => { const n = String(s ?? '').trim(); if (!n) throw err(400, 'Enter a folder name.'); return n; };
+    if (action === 'create') {
+      // imapflow meldet „gibt es schon“ (ALREADYEXISTS) als created: false statt als Fehler
+      const r = await c.createFolder(name(p));
+      if (r && r.created === false) throw err(409, 'A folder with this name already exists.');
+    } else if (action === 'rename') await c.renameFolder(String(p), name(to));
     else if (action === 'delete') {
-      const f = (await this.folders(id)).find((x) => x.path === p);
-      if (f && f.role) throw err(400, 'Hostwerk doesn’t delete special folders (inbox, sent, trash …).');
+      // imapflow swallows the server's NO on DELETE – so check before and after instead of reporting a success that wasn't one
+      const f = (await this.folders(id, { fresh: true })).find((x) => x.path === p);
+      if (!f) throw err(404, 'This folder doesn’t exist (anymore).');
+      if (f.role) throw err(400, 'Hostwerk doesn’t delete special folders (inbox, sent, trash …).');
       await c.deleteFolder(String(p));
+      this.folderCache.delete(id);
+      if ((await this.folders(id, { fresh: true })).some((x) => x.path === p)) throw err(409, 'The mail server refused to delete the folder.');
     } else throw err(400, 'Unknown action.');
     this.folderCache.delete(id);
     return this.folders(id, { fresh: true });
@@ -455,7 +466,8 @@ class MailService extends EventEmitter {
     return items.map((it) => { const e = this.cache.index[it.key]; return e && e.text ? { ...it, snippet: e.text.replace(/\s+/g, ' ').slice(0, 140), cached: true } : it; });
   }
   async messages({ account, folder = 'INBOX', page = 0, size = 50, filter = {}, q = '' }) {
-    size = Math.max(10, Math.min(200, Number(size) || 50));
+    // bis 1000: die Oberfläche lädt „Mehr laden“ als größere erste Seite (50, 100, … – bei 200 wäre sonst Schluss)
+    size = Math.max(10, Math.min(1000, Number(size) || 50));
     page = Math.max(0, Number(page) || 0);
     if (account === 'all') return this.unified({ page, size, filter, q });
     this.account(account);
@@ -467,7 +479,7 @@ class MailService extends EventEmitter {
       return { total: r.total, items: this.withSnippets(r.items), threads: this.prefsCfg.threads ? this.threadList(r.items) : null, local, page, size };
     } catch (e) {
       const c = this.cache.getList(account, folder);
-      if (c && (e.code === 'offline' || e.code === 'network' || e.code === 'timeout' || e.code === 'dns' || this.offline())) {
+      if (c && (e.code === 'offline' || e.code === 'network' || e.code === 'timeout' || e.code === 'dns' || e.code === 'refused' || this.offline())) {
         let items = c.items || [];
         if (q) { const hits = new Set(this.cache.search(q, { account, folder }).map((x) => x.key)); items = items.filter((x) => hits.has(x.key) || String(x.subject).toLowerCase().includes(String(q).toLowerCase())); }
         if (filter.unread) items = items.filter((x) => !x.seen);
@@ -523,8 +535,13 @@ class MailService extends EventEmitter {
   isTrustedSender(raw) {
     const list = this.prefsCfg.trustedSenders || [];
     if (!list.length) return false;
-    const m = /^from:.*?([\w.+-]+@[\w.-]+)/im.exec(String(raw.slice(0, 16384)));
-    const addr = m ? m[1].toLowerCase() : '';
+    // Echte Absender-Adresse: Kopf entfalten, Anzeigenamen in "…" und Kommentare (…) entfernen, dann <adresse> –
+    // sonst würde "trusted@bank.de" <angreifer@x.de> als vertraut gelten und Bilder/Zählpixel laden
+    const head = String(raw.slice(0, 16384)).split(/\r?\n\r?\n/)[0].replace(/\r?\n[ \t]+/g, ' ');
+    const line = /^from:(.*)$/im.exec(head);
+    const v = line ? line[1].replace(/"(?:[^"\\]|\\.)*"/g, ' ').replace(/\([^()]*\)/g, ' ') : '';
+    const angle = [...v.matchAll(/<([^<>\s]+@[^<>\s]+)>/g)].pop();
+    const addr = String(angle ? angle[1] : (/([\w.+-]+@[\w.-]+)/.exec(v) || [])[1] || '').toLowerCase();
     return !!addr && list.some((x) => x === addr || (x.startsWith('@') && addr.endsWith(x)));
   }
   async rawOf(account, folder, uid) {
@@ -739,8 +756,10 @@ class MailService extends EventEmitter {
   setPrefs(p) {
     const n = { ...this.prefsCfg };
     if (p.notify !== undefined) n.notify = !!p.notify;
-    if (p.quiet) n.quiet = { on: !!p.quiet.on, from: /^\d{1,2}:\d{2}$/.test(p.quiet.from) ? p.quiet.from : n.quiet.from, to: /^\d{1,2}:\d{2}$/.test(p.quiet.to) ? p.quiet.to : n.quiet.to };
-    if (p.cacheMB !== undefined) { n.cacheMB = Math.max(0, Math.min(20000, Number(p.cacheMB) || 0)); this.cache.setLimit(n.cacheMB || 1); }
+    const hhmm = (s) => /^([01]?\d|2[0-3]):[0-5]\d$/.test(String(s));
+    if (p.quiet) n.quiet = { on: !!p.quiet.on, from: hhmm(p.quiet.from) ? p.quiet.from : n.quiet.from, to: hhmm(p.quiet.to) ? p.quiet.to : n.quiet.to };
+    // 0 = „Nichts behalten“: wirklich nichts zwischenspeichern (wie nach einem Neustart), nicht still 20 MB
+    if (p.cacheMB !== undefined) { n.cacheMB = Math.max(0, Math.min(20000, Number(p.cacheMB) || 0)); this.cache.setLimit(n.cacheMB); }
     for (const k of ['markReadOnOpen', 'threads', 'aiConsent', 'prefetch']) if (p[k] !== undefined) n[k] = !!p[k];
     if (p.undoSeconds !== undefined) n.undoSeconds = Math.max(0, Math.min(60, Number(p.undoSeconds) || 0));
     if (p.composeFormat) n.composeFormat = p.composeFormat === 'text' ? 'text' : 'html';
@@ -763,13 +782,17 @@ class MailService extends EventEmitter {
     for (const a of this.accountsCfg.filter((x) => (account ? x.id === account : x.enabled !== false))) {
       const page = await this.client(a.id).list('INBOX', { size: limit });
       for (const it of page.items) {
-        for (const { actions } of evaluate(this.rulesCfg, it)) {
+        const matches = evaluate(this.rulesCfg, it);
+        if (matches.length) {
           hits++;
-          for (const x of actions) {
-            if (x.type === 'read') await this.client(a.id).flags('INBOX', [it.uid], { add: ['\\Seen'] });
-            else if (x.type === 'flag') await this.client(a.id).flags('INBOX', [it.uid], { add: ['\\Flagged'] });
-            else if (x.type === 'move') await this.client(a.id).move('INBOX', [it.uid], x.folder);
-            else if (x.type === 'archive' || x.type === 'trash') await this.moveRole(a.id, 'INBOX', [it.uid], x.type);
+          for (const x of ordered(matches)) {
+            // Wie bei neuen Mails: scheitert eine Aktion (z. B. Ordner weg, Mail schon verschoben), laufen die übrigen weiter
+            try {
+              if (x.type === 'read') await this.client(a.id).flags('INBOX', [it.uid], { add: ['\\Seen'] });
+              else if (x.type === 'flag') await this.client(a.id).flags('INBOX', [it.uid], { add: ['\\Flagged'] });
+              else if (x.type === 'move') await this.client(a.id).move('INBOX', [it.uid], x.folder);
+              else if (x.type === 'archive' || x.type === 'trash') await this.moveRole(a.id, 'INBOX', [it.uid], x.type);
+            } catch { /* nächste Aktion */ }
           }
         }
       }

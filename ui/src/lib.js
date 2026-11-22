@@ -1,8 +1,19 @@
 /*
  * Gemeinsames für die Oberfläche: Adressen der API, Ordner-Rollen mit Symbolen, Datumsanzeige, kleine Helfer.
  */
+import { createElement } from 'react';
 import { Inbox, Send, FileText, Trash2, ShieldAlert, Archive, Star, Folder } from 'lucide-react';
 import { t } from '@hostwerk/i18n';
+import { Keep as HostKeep } from '@hostwerk/kit';
+
+/**
+ * Nutzerdaten (Betreff, Namen, Ordner, Dateinamen) nicht durch die automatische Übersetzung schicken – sonst zeigt
+ * Englisch den Ordner „Projekte“ als „Projects“ und Deutsch einen Betreff „Settings“ als „Einstellungen“.
+ * Ältere Hostwerk-Versionen ohne <Keep>: einfach durchreichen.
+ */
+export const Keep = HostKeep || (({ children }) => children);
+/** <option> mit Nutzerdaten (Konto, Absender, Ordner): ohne die übersetzende JSX-Laufzeit – <Keep> ginge in <option> nicht */
+export const rawOption = (value, text) => createElement('option', { key: value, value }, String(text));
 
 export const BASE = '/mail-accounts';
 export const TAB_HASH = '#/mail/x-mail-accounts-inbox';
@@ -17,6 +28,8 @@ export const ROLE_ORDER = ['inbox', 'drafts', 'sent', 'archive', 'all', 'flagged
 export const ROLE_LABEL = { inbox: 'Inbox', sent: 'Sent', drafts: 'Drafts', trash: 'Trash', junk: 'Spam', archive: 'Archive', all: 'All mail', flagged: 'Starred' };
 export const folderIcon = (f) => (f && f.role && ROLE_ICON[f.role]) || Folder;
 export const folderLabel = (f) => (f && f.role && ROLE_LABEL[f.role] ? t(ROLE_LABEL[f.role]) : f ? f.name : '');
+/** Ziele für „Verschieben nach …“ (Liste und Lesebereich gleich): sortiert, übersetzte Sonderordner, sonst voller Pfad */
+export const moveTargets = (list, current) => sortFolders(list).filter((f) => f.path !== current).map((f) => ({ path: f.path, label: f.role && ROLE_LABEL[f.role] ? folderLabel(f) : f.path, icon: folderIcon(f) }));
 export const sortFolders = (list) => [...(list || [])].sort((a, b) => {
   const ra = ROLE_ORDER.indexOf(a.role); const rb = ROLE_ORDER.indexOf(b.role);
   if (ra !== rb) return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb);

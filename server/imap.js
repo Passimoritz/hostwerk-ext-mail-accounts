@@ -182,7 +182,12 @@ class AccountClient extends EventEmitter {
     });
   }
   async move(path, uids, dest) {
-    return this.withBox(path, async (c) => { const r = await c.messageMove([].concat(uids).join(','), dest, { uid: true }); return r || true; });
+    // imapflow meldet ein abgelehntes MOVE (z. B. Ordner gibt es nicht) mit false statt einem Fehler – nicht als Erfolg werten
+    return this.withBox(path, async (c) => {
+      const r = await c.messageMove([].concat(uids).join(','), dest, { uid: true });
+      if (!r) throw Object.assign(new Error('The mails couldn’t be moved – does the folder still exist?'), { status: 409 });
+      return r;
+    });
   }
   async copy(path, uids, dest) {
     return this.withBox(path, async (c) => c.messageCopy([].concat(uids).join(','), dest, { uid: true }));
@@ -198,7 +203,8 @@ class AccountClient extends EventEmitter {
   async createFolder(path) { const c = await this.ops(); return c.mailboxCreate(path); }
   async renameFolder(path, to) { const c = await this.ops(); return c.mailboxRename(path, to); }
   async deleteFolder(path) { const c = await this.ops(); return c.mailboxDelete(path); }
-  async status(path) { const c = await this.ops(); return c.status(path, { messages: true, unseen: true, uidNext: true, uidValidity: true }); }
+  /** Zähler eines Ordners (heißt nicht status() – this.status ist der Verbindungszustand und würde die Methode verdecken) */
+  async folderStatus(path) { const c = await this.ops(); return c.status(path, { messages: true, unseen: true, uidNext: true, uidValidity: true }); }
 
   /** Alle Mails eines Ordners nacheinander (Export) – onMessage(raw, meta) */
   async each(path, onMessage, { batch = 50 } = {}) {

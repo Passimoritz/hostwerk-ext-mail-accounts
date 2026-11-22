@@ -78,3 +78,40 @@ test('Ganze Mail: Ansicht mit bereinigtem HTML, Prüfergebnis und Abmelde-Link',
   assert.strictEqual(v.unsubscribe.http, 'https://bank.example/u');
   assert.match(v.snippet, /Hallo/);
 });
+
+test('Vertraute Absender: zählt nur die echte Adresse, nicht der Anzeigename', () => {
+  const { MailService } = require('../server/service');
+  const s = Object.create(MailService.prototype);
+  s.prefsCfg = { trustedSenders: ['trusted@bank.example', '@shop.example'] };
+  const t = (from) => s.isTrustedSender(Buffer.from(`${from}\r\nSubject: x\r\n\r\nInhalt`));
+  assert.strictEqual(t('From: "trusted@bank.example" <angreifer@evil.example>'), false);
+  assert.strictEqual(t('From: angreifer@evil.example (trusted@bank.example)'), false);
+  assert.strictEqual(t('From: Bank <trusted@bank.example>'), true);
+  assert.strictEqual(t('From: =?utf-8?Q?Bank?=\r\n <trusted@bank.example>'), true);
+  assert.strictEqual(t('From: news@shop.example'), true);
+  assert.strictEqual(t('From: "x" <a@evil.example>\r\nReply-To: trusted@bank.example'), false);
+});
+
+test('Regeln: erst markieren, dann EIN Verschieben (sonst ginge der Stern ins Leere)', () => {
+  const { ordered } = require('../server/rules');
+  const out = ordered([{ actions: [{ type: 'move', folder: 'A' }, { type: 'flag' }] }, { actions: [{ type: 'archive' }, { type: 'read' }] }]);
+  assert.deepStrictEqual(out.map((a) => a.type), ['flag', 'read', 'move']);
+});
+
+test('Zwischenspeicher: 0 MB heißt wirklich nichts behalten', () => {
+  const fs = require('fs'); const os = require('os'); const path = require('path');
+  const { Cache } = require('../server/cache');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hw-ma-cache-'));
+  try {
+    const c = new Cache(dir, { limitMB: 300 });
+    c.put('a|INBOX|1', Buffer.from('x'.repeat(100)), { text: 'x' }, { account: 'a' });
+    assert.strictEqual(c.stats().count, 1);
+    c.setLimit(0);
+    assert.strictEqual(c.stats().limit, 0);
+    assert.strictEqual(c.stats().count, 0);
+    c.put('a|INBOX|2', Buffer.from('y'), { text: 'y' }, { account: 'a' });
+    assert.strictEqual(c.stats().count, 0);
+    c.setLimit(5); // unter 20 → 20 MB
+    assert.strictEqual(c.stats().limit, 20 * 1024 * 1024);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

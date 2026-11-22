@@ -4,7 +4,7 @@ import { get, post } from '@hostwerk/api';
 import { Btn, Modal, toast, confirmDialog, promptDialog, InfoTip } from '@hostwerk/ui';
 import { contextMenu } from '@hostwerk/kit';
 import { t, pl } from '@hostwerk/i18n';
-import { BASE, fmtSize, readFile, addrText } from './lib';
+import { BASE, fmtSize, readFile, addrText, Keep, rawOption } from './lib';
 
 const ADDR = /^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/;
 const parseAddr = (s) => { const m = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(s); return m ? { name: m[1].trim(), address: m[2].trim().toLowerCase() } : { name: '', address: String(s).trim().toLowerCase() }; };
@@ -31,25 +31,35 @@ function Recipients({ label, value, onChange, autoFocus }) {
     return () => clearTimeout(h);
   }, [text]);
   const add = (a) => { if (a && ADDR.test(a.address) && !value.some((v) => v.address === a.address)) onChange([...value, a]); setText(''); setSugg([]); };
-  const commit = () => { for (const p of text.split(/[,;]+/).map((x) => x.trim()).filter(Boolean)) add(parseAddr(p)); };
+  // Mehrere Adressen auf einmal (eingefügt „a@x.de, b@y.de“) in EINEM Schritt übernehmen; Ungültiges bleibt zum Korrigieren stehen
+  // src: der eben getippte Text (beim Komma schon vor dem nächsten Zeichnen bekannt); typing: Ungültiges mit „, “ stehen
+  // lassen, damit die nächste Adresse nicht an „kaputt“ angehängt wird
+  const commit = (src = text, typing = false) => {
+    const parts = String(src).split(/[,;]+/).map((x) => x.trim()).filter(Boolean).map(parseAddr);
+    const good = []; const bad = [];
+    for (const p of parts) { if (!ADDR.test(p.address)) bad.push(p); else if (!value.some((v) => v.address === p.address) && !good.some((g) => g.address === p.address)) good.push(p); }
+    if (good.length) onChange([...value, ...good]);
+    setText(bad.length ? `${bad.map(addrText).join(', ')}${typing ? ', ' : ''}` : ''); setSugg([]);
+    if (bad.length) toast.error(t('“{address}” isn’t a valid e-mail address.', { address: bad[0].address }));
+  };
   return (
     <div className="ma-rcpt">
       <label htmlFor={id} className="ma-rcpt-label">{label}</label>
       <div className="ma-rcpt-box">
         {value.map((a) => (
           <span key={a.address} className={`ma-chip${ADDR.test(a.address) ? '' : ' ma-chip-bad'}`} title={addrText(a)}>
-            {a.name || a.address}
+            <Keep>{a.name || a.address}</Keep>
             <button type="button" className="ma-chip-x" aria-label={t('Remove {name}', { name: a.address })} onClick={() => onChange(value.filter((v) => v !== a))}><X size={12} /></button>
           </span>
         ))}
         <input id={id} className="ma-rcpt-input" value={text} autoFocus={autoFocus} autoComplete="off" role="combobox" aria-expanded={sugg.length > 0} aria-controls={`${id}-l`} aria-autocomplete="list"
-          onChange={(e) => { const v = e.target.value; if (/[,;]\s*$/.test(v)) { setText(v); setTimeout(commit, 0); } else setText(v); }}
-          onBlur={() => setTimeout(commit, 150)}
+          onChange={(e) => { const v = e.target.value; if (/[,;]\s*$/.test(v)) { setText(v); setTimeout(() => commit(v, true), 0); } else setText(v); }}
+          onBlur={(e) => { const v = e.target.value; setTimeout(() => commit(v), 150); }}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' && sugg.length) { e.preventDefault(); setHi((h) => Math.min(sugg.length - 1, h + 1)); }
             else if (e.key === 'ArrowUp' && sugg.length) { e.preventDefault(); setHi((h) => Math.max(0, h - 1)); }
             else if ((e.key === 'Enter' || e.key === 'Tab') && sugg.length && text) { e.preventDefault(); add(sugg[hi]); }
-            else if (e.key === 'Enter' && text) { e.preventDefault(); commit(); }
+            else if (e.key === 'Enter' && text) { e.preventDefault(); commit(text); }
             else if (e.key === 'Backspace' && !text && value.length) onChange(value.slice(0, -1));
             else if (e.key === 'Escape' && sugg.length) { e.stopPropagation(); setSugg([]); }
           }} />
@@ -200,7 +210,7 @@ export function Compose({ overview, initial, onClose, onSent }) {
           <div className="ma-rcpt">
             <label className="ma-rcpt-label" htmlFor="ma-from">From</label>
             <select id="ma-from" className="select ma-from-select" value={`${acc}|${from}`} onChange={(e) => { const [a, f] = e.target.value.split('|'); setAcc(a); setFrom(f); setDirty(true); }}>
-              {accounts.flatMap((a) => [{ name: a.displayName, address: a.email }, ...(a.aliases || [])].map((s) => <option key={`${a.id}|${s.address}`} value={`${a.id}|${s.address}`}>{s.name ? `${s.name} <${s.address}>` : s.address}{accounts.length > 1 ? ` · ${a.name}` : ''}</option>))}
+              {accounts.flatMap((a) => [{ name: a.displayName, address: a.email }, ...(a.aliases || [])].map((s) => rawOption(`${a.id}|${s.address}`, `${s.name ? `${s.name} <${s.address}>` : s.address}${accounts.length > 1 ? ` · ${a.name}` : ''}`)))}
             </select>
             {!showCc && <Btn className="xs ghost" onClick={() => setShowCc(true)}>Cc/Bcc</Btn>}
           </div>
@@ -227,7 +237,7 @@ export function Compose({ overview, initial, onClose, onSent }) {
           <div className="ma-atts" aria-label={t('Attachments')}>
             {atts.map((a, i) => (
               <span key={i} className="ma-att" title={a.filename}>
-                <Paperclip size={13} aria-hidden="true" /><span className="ellipsis">{a.filename}</span><span className="muted small">{fmtSize(a.size)}</span>
+                <Paperclip size={13} aria-hidden="true" /><span className="ellipsis"><Keep>{a.filename}</Keep></span><span className="muted small">{fmtSize(a.size)}</span>
                 <button type="button" className="ma-chip-x" aria-label={t('Remove {name}', { name: a.filename })} onClick={() => { setAtts(atts.filter((x, j) => j !== i)); setDirty(true); }}><X size={12} /></button>
               </span>
             ))}

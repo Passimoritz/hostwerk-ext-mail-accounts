@@ -3,7 +3,7 @@ import { Settings2, Bell, Filter, FileText, HardDrive, Sparkles, Send, Plus, Tra
 import { get, put, post, del } from '@hostwerk/api';
 import { Btn, Modal, Tabs, Field, Switch, SettingRow, Callout, InfoTip, Empty, toast, confirmDialog } from '@hostwerk/ui';
 import { t, pl } from '@hostwerk/i18n';
-import { BASE, fmtSize, when, emit } from './lib';
+import { BASE, fmtSize, when, emit, rawOption, Keep } from './lib';
 
 const FIELDS = [{ id: 'from', label: 'Sender' }, { id: 'to', label: 'Recipient' }, { id: 'subject', label: 'Subject' }, { id: 'list', label: 'Is a newsletter' }, { id: 'attachment', label: 'Has attachments' }];
 const OPS = [{ id: 'contains', label: 'contains' }, { id: 'not-contains', label: 'doesn’t contain' }, { id: 'is', label: 'is exactly' }, { id: 'ends-with', label: 'ends with' }];
@@ -66,7 +66,7 @@ function Rules({ accounts }) {
     return (
       <div className="stack">
         <Field label="Name"><input className="input" value={r.name} onChange={(e) => set({ name: e.target.value })} placeholder={t('e.g. Newsletters into “Reading”')} /></Field>
-        <Field label="Account"><select className="select" value={r.account} onChange={(e) => set({ account: e.target.value })}><option value="*">{t('All accounts')}</option>{accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
+        <Field label="Account"><select className="select" value={r.account} onChange={(e) => set({ account: e.target.value })}><option value="*">{t('All accounts')}</option>{accounts.map((a) => rawOption(a.id, a.name))}</select></Field>
         <div className="row-tight"><span>{t('When')}</span><select className="select ma-narrow" value={r.match} onChange={(e) => set({ match: e.target.value })}><option value="all">{t('all conditions apply')}</option><option value="any">{t('one condition applies')}</option></select></div>
         {r.conditions.map((c, i) => (
           <div key={i} className="row-tight ma-rule-row">
@@ -85,7 +85,7 @@ function Rules({ accounts }) {
         {r.actions.map((a, i) => (
           <div key={i} className="row-tight ma-rule-row">
             <select className="select" aria-label={t('Action')} value={a.type} onChange={(e) => set({ actions: r.actions.map((x, j) => (j === i ? { type: e.target.value } : x)) })}>{ACTIONS.map((o) => <option key={o.id} value={o.id}>{t(o.label)}</option>)}</select>
-            {a.type === 'move' && <select className="select" aria-label={t('Folder')} value={a.folder || ''} onChange={(e) => set({ actions: r.actions.map((x, j) => (j === i ? { ...x, folder: e.target.value } : x)) })}><option value="">{t('Choose a folder …')}</option>{folders.map((f) => <option key={f.path} value={f.path}>{f.path}</option>)}</select>}
+            {a.type === 'move' && <select className="select" aria-label={t('Folder')} value={a.folder || ''} onChange={(e) => set({ actions: r.actions.map((x, j) => (j === i ? { ...x, folder: e.target.value } : x)) })}><option value="">{t('Choose a folder …')}</option>{folders.map((f) => rawOption(f.path, f.path))}</select>}
             <Btn className="xs ghost icon" icon={X} title="Remove action" aria-label="Remove action" disabled={r.actions.length < 2} onClick={() => set({ actions: r.actions.filter((x, j) => j !== i) })} />
           </div>
         ))}
@@ -103,7 +103,7 @@ function Rules({ accounts }) {
         <div key={r.id} className="row-tight ma-rule card">
           <div className="card-body row-tight grow">
             <Switch checked={r.on} onChange={(v) => store(rules.map((x) => (x.id === r.id ? { ...x, on: v } : x)))} label={r.name || t('Rule')} />
-            <span className="grow"><b>{r.name || t('Rule {n}', { n: i + 1 })}</b> <span className="small muted">{pl(r.conditions.length, '{n} condition', '{n} conditions')} → {r.actions.map((a) => t((ACTIONS.find((x) => x.id === a.type) || {}).label || a.type)).join(', ')}</span></span>
+            <span className="grow" style={{ overflowWrap: 'anywhere' }}><b><Keep>{r.name || t('Rule {n}', { n: i + 1 })}</Keep></b> <span className="small muted">{pl(r.conditions.length, '{n} condition', '{n} conditions')} → {r.actions.map((a) => t((ACTIONS.find((x) => x.id === a.type) || {}).label || a.type)).join(', ')}</span></span>
             <Btn className="xs ghost icon" icon={ArrowUp} title="Move up" aria-label="Move up" disabled={!i} onClick={() => { const l = [...rules]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; store(l); }} />
             <Btn className="xs ghost icon" icon={ArrowDown} title="Move down" aria-label="Move down" disabled={i === rules.length - 1} onClick={() => { const l = [...rules]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; store(l); }} />
             <Btn className="xs ghost icon" icon={Pencil} title="Edit" aria-label="Edit" onClick={() => setEdit(r)} />
@@ -138,7 +138,7 @@ function Templates() {
       {!list.length && <Empty icon={FileText} title="No templates yet" text="Texts you write often – insert them with one click when writing." />}
       {list.map((x) => (
         <div key={x.id} className="row-tight card"><div className="card-body row-tight grow">
-          <FileText size={15} aria-hidden="true" /><b className="grow">{x.name}</b>
+          <FileText size={15} aria-hidden="true" /><b className="grow ellipsis" title={x.name}><Keep>{x.name}</Keep></b>
           <Btn className="xs ghost icon" icon={Pencil} title="Edit" aria-label="Edit" onClick={() => setEdit(x)} />
           <Btn className="xs ghost icon" icon={Trash2} title="Delete template" aria-label="Delete template" onClick={() => store(list.filter((y) => y.id !== x.id))} />
         </div></div>

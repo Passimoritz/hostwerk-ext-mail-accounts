@@ -8,7 +8,7 @@ import { Btn, Empty, Loading, Callout, InfoTip, toast, confirmDialog, promptDial
 import { useFill } from './fill';
 import { contextMenu } from '@hostwerk/kit';
 import { t, pl } from '@hostwerk/i18n';
-import { BASE, qs, apiUrl, sortFolders, folderIcon, folderLabel, when, who, initials, hue, typing, listen, emit } from './lib';
+import { BASE, qs, apiUrl, sortFolders, folderIcon, folderLabel, moveTargets, Keep, when, who, initials, hue, typing, listen, emit } from './lib';
 import { Reader } from './Reader';
 import { Compose } from './Compose';
 import { AccountWizard, AccountSettings } from './Setup';
@@ -56,7 +56,7 @@ function Sidebar({ overview, view, setView, folders, loadFolders, onCompose, onA
               <button type="button" className="ma-acc-toggle" aria-expanded={isOpen} onClick={() => { toggle(a.id); if (!isOpen && !folders[a.id]) loadFolders(a.id); }}>
                 {isOpen ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
                 <span className="ma-dot" aria-hidden="true" />
-                <span className="grow ellipsis" title={a.email}>{a.name}</span>
+                <span className="grow ellipsis" title={a.name === a.email ? a.email : `${a.name} · ${a.email}`}><Keep>{a.name}</Keep></span>
                 {bad && <CircleAlert size={14} className="ma-bad" aria-label={t(STATUS[a.status])} />}
                 {a.status === 'connecting' && <Loader2 size={13} className="spin hw-spin muted" aria-label={t('Connecting …')} />}
                 {a.unread > 0 && <span className="ma-count">{a.unread}</span>}
@@ -75,7 +75,7 @@ function Sidebar({ overview, view, setView, folders, loadFolders, onCompose, onA
                       onDragOver={(e) => { if (e.dataTransfer.types.includes('application/x-hw-mail')) { e.preventDefault(); e.currentTarget.classList.add('drop'); } }}
                       onDragLeave={(e) => e.currentTarget.classList.remove('drop')}
                       onDrop={(e) => { e.currentTarget.classList.remove('drop'); const d = e.dataTransfer.getData('application/x-hw-mail'); if (d) emit('drop', { items: JSON.parse(d), account: a.id, folder: f.path }); }}>
-                      <I size={15} aria-hidden="true" /><span className="grow ellipsis">{folderLabel(f)}</span>{f.unseen > 0 && f.role !== 'sent' && f.role !== 'trash' && f.role !== 'junk' && <span className="ma-count">{f.unseen}</span>}
+                      <I size={15} aria-hidden="true" /><span className="grow ellipsis"><Keep>{folderLabel(f)}</Keep></span>{f.unseen > 0 && f.role !== 'sent' && f.role !== 'trash' && f.role !== 'junk' && <span className="ma-count">{f.unseen}</span>}
                     </button></li>
                   );
                 })}
@@ -109,14 +109,14 @@ function Row({ it, count, selected, active, checked, onOpen, onCheck, onMenu, co
       <div className="ma-row-main">
         <div className="ma-row-top">
           {acc && <span className="ma-dot" style={{ '--acc': acc.color }} title={acc.email} aria-label={acc.email} />}
-          <span className="ma-from ellipsis">{sent ? `${t('To')}: ${who(person)}` : who(person)}</span>
+          <span className="ma-from ellipsis"><Keep>{sent ? `${t('To')}: ${who(person)}` : who(person)}</Keep></span>
           {count > 1 && <span className="ma-thread-n" aria-label={pl(count, '{n} mail in this conversation', '{n} mails in this conversation')}>{count}</span>}
           <span className="grow" />
           {it.attachment && <Paperclip size={13} className="muted" aria-label={t('Has attachments')} />}
           {it.flagged && <Star size={13} className="ma-star" aria-label={t('Starred')} />}
           <time className="ma-when small" dateTime={it.date ? new Date(it.date).toISOString() : undefined}>{when(it.date)}</time>
         </div>
-        <div className="ma-row-sub ellipsis"><span className="ma-subj">{it.subject || t('(no subject)')}</span>{!compact && it.snippet ? <span className="muted"> – {it.snippet}</span> : null}</div>
+        <div className="ma-row-sub ellipsis"><span className="ma-subj"><Keep>{it.subject || t('(no subject)')}</Keep></span>{!compact && it.snippet ? <span className="muted"> – <Keep>{it.snippet}</Keep></span> : null}</div>
       </div>
     </div>
   );
@@ -218,6 +218,12 @@ export function MailApp({ embedded = false }) {
     }
     return out;
   }, [list, expanded]);
+  // Geöffnete Mail gleich als gelesen zeigen (der Server markiert sie beim Laden) – nicht erst nach der nächsten Meldung
+  const markOnOpen = !overview || !overview.prefs || overview.prefs.markReadOnOpen !== false;
+  useEffect(() => {
+    if (!active || !markOnOpen) return;
+    setList((l) => (l && (l.items || []).some((x) => x.key === active && !x.seen) ? { ...l, items: l.items.map((x) => (x.key === active ? { ...x, seen: true } : x)) } : l));
+  }, [active, markOnOpen]);
   const flat = rows.map((r) => r.it);
   const activeItem = active ? flat.find((x) => x.key === active) || (list && (list.items || []).find((x) => x.key === active)) : null;
   const sel = () => (checked.size ? flat.filter((x) => checked.has(x.key)) : activeItem ? [activeItem] : []);
@@ -318,7 +324,7 @@ export function MailApp({ embedded = false }) {
       { label: it.flagged ? t('Remove star') : t('Star'), icon: Star, onClick: () => act('flag', items, { on: !it.flagged }) },
       { label: t('Archive'), icon: Archive, onClick: () => act('archive', items) },
       { label: t('Spam'), icon: Ban, onClick: () => act('junk', items) },
-      { label: t('Move to …'), icon: FolderInput, onClick: () => contextMenu(e, sortFolders(folders[it.account] || []).filter((f) => f.path !== it.folder).map((f) => ({ label: f.path, icon: folderIcon(f), onClick: () => act('move', items, { folder: f.path }) }))) },
+      { label: t('Move to …'), icon: FolderInput, onClick: () => contextMenu(e, moveTargets(folders[it.account], it.folder).map((f) => ({ label: <Keep>{f.label}</Keep>, icon: f.icon, onClick: () => act('move', items, { folder: f.path }) }))) },
       { label: t('Delete'), icon: Trash2, danger: true, onClick: () => act('delete', items) },
       '-',
       it.from && { label: t('Find mails from {name}', { name: who(it.from) }), icon: Search, onClick: () => { setQLive(it.from.address); setQ(it.from.address); } },
@@ -334,7 +340,7 @@ export function MailApp({ embedded = false }) {
         <section className="ma-list" aria-label={title}>
           <div className="ma-list-head">
             <div className="row-tight">
-              <h2 className="ma-list-title grow ellipsis">{title}</h2>
+              <h2 className="ma-list-title grow ellipsis"><Keep>{title}</Keep></h2>
               {list && <span className="small muted">{list.offline ? <><CloudOff size={12} aria-hidden="true" /> {t('offline')}</> : pl(list.total || 0, '{n} mail', '{n} mails')}</span>}
               <Btn className="xs ghost icon" icon={RefreshCw} busy={loading} title="Reload" aria-label="Reload" onClick={() => loadList({ keep: true })} />
               <InfoTip>{t('Keys: J/K next/previous · Enter open · R reply · A reply all · F forward · E archive · # delete · S star · U read/unread · X select · C write · / search · Esc close')}</InfoTip>
@@ -363,6 +369,8 @@ export function MailApp({ embedded = false }) {
           </div>
           {errors.filter((x) => !x.offline).map((x) => { const a = accounts.find((y) => y.id === x.account); return <Callout key={x.account} kind="warn" dismissible={false}>{a ? `${a.name}: ` : ''}{t(x.text || '')}</Callout>; })}
           {list && list.offline && <Callout kind="info" icon={CloudOff} dismissible={false}>{t('No connection – you see the last known state.')}</Callout>}
+          {/* All inboxes: accounts without connection come from the cache – say which ones */}
+          {list && list.unified && errors.some((x) => x.offline) && <Callout kind="info" icon={CloudOff} dismissible={false}>{t('No connection to {names} – their mails show the last known state.', { names: errors.filter((x) => x.offline).map((x) => (accounts.find((y) => y.id === x.account) || {}).name || x.account).join(', ') })}</Callout>}
           <div className="ma-rows" role="listbox" aria-label={title} aria-multiselectable="true" ref={listRef}>
             {!list && !listErr && <Loading />}
             {listErr && <Empty icon={CircleAlert} title="Couldn’t load the mails" text={t(listErr.message)} action={<Btn onClick={() => loadList()}>Try again</Btn>} />}
@@ -378,10 +386,10 @@ export function MailApp({ embedded = false }) {
             {list && (list.local || []).length > 0 && q && (
               <div className="ma-local-hits">
                 <div className="small muted"><Users size={12} aria-hidden="true" /> {t('Also found in mails stored on this PC')}</div>
-                {list.local.slice(0, 10).map((x) => <button key={x.key} type="button" className="ma-local-hit ellipsis" onClick={() => { setView({ account: x.account, folder: x.folder }); setTimeout(() => setActive(x.key), 600); }}>{x.subject} <span className="muted small">· {x.folder}</span></button>)}
+                {list.local.slice(0, 10).map((x) => <button key={x.key} type="button" className="ma-local-hit ellipsis" onClick={() => { setView({ account: x.account, folder: x.folder }); setTimeout(() => setActive(x.key), 600); }}><Keep>{x.subject}</Keep> <span className="muted small">· <Keep>{x.folder}</Keep></span></button>)}
               </div>
             )}
-            {list && list.total > (list.items || []).length && !list.offline && <div className="ma-more"><Btn className="sm" busy={loading} onClick={() => setPages((p) => p + 1)}>Load more</Btn></div>}
+            {list && list.total > (list.items || []).length && (list.items || []).length < 1000 && !list.offline && <div className="ma-more"><Btn className="sm" busy={loading} onClick={() => setPages((p) => p + 1)}>Load more</Btn></div>}
           </div>
         </section>
       )}

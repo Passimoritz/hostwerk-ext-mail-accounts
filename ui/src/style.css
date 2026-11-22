@@ -8,6 +8,8 @@
 
 /* Seitenleiste */
 .ma-side { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3) var(--sp-2); border-right: 1px solid var(--line); background: var(--bg-2); overflow-y: auto; min-width: 0; }
+/* Hostwerks runder KI-Knopf (unten links im Inhalt) läge sonst über „Konto hinzufügen“/„Einstellungen“ – wie bei .mail-list des Kerns */
+body.ai-fab-on .ma-side { padding-bottom: 64px; }
 .ma-compose-btn { margin: 0 var(--sp-1) var(--sp-2); justify-content: center; }
 .ma-folders { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
 .ma-folder { display: flex; align-items: center; gap: var(--sp-2); width: 100%; min-height: 30px; padding: 4px var(--sp-2) 4px calc(var(--sp-2) + var(--depth, 0) * 12px); border: 0; border-radius: var(--r-md); background: none; color: var(--text-2); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
