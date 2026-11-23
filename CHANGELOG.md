@@ -1,3 +1,9 @@
+## 1.1.1
+
+- Safer reading: a sender only counts as trusted with the real address (a display name like “trusted@bank.de” no longer loads images). / Sichereres Lesen: Ein Absender gilt nur mit der echten Adresse als vertraut (ein Anzeigename wie „trusted@bank.de“ lädt keine Bilder mehr).
+- Fixes: .mbox export works again, creating an existing folder, deleting a missing one and refused moves are reported instead of shown as success, rules first mark and then move once, cache size 0 keeps nothing, “Load more” goes beyond 200 mails. / Behoben: .mbox-Export geht wieder, einen vorhandenen Ordner anlegen, einen fehlenden löschen und abgelehntes Verschieben werden gemeldet statt als Erfolg gezeigt, Regeln markieren erst und verschieben dann einmal, Zwischenspeicher 0 speichert nichts, „Mehr laden“ geht über 200 Mails hinaus.
+- Folder names, subjects and account names are no longer translated automatically; “Move to …” is the same everywhere; pasting several recipients, long template names and the AI button no longer get in the way. / Ordnernamen, Betreffe und Kontonamen werden nicht mehr automatisch übersetzt; „Verschieben nach …“ ist überall gleich; mehrere Empfänger einfügen, lange Vorlagennamen und der KI-Knopf stören nicht mehr.
+
 ## 1.1.0
 
 - The “connecting” icon uses Hostwerk’s spin animation and stands still with “Reduce animations” (SDK 3.6). / Das Symbol „verbindet“ nutzt Hostwerks Dreh-Animation und steht bei „Animationen reduzieren“ still (SDK 3.6).
